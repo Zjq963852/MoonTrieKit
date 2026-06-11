@@ -65,3 +65,13 @@ test "common prefix length supports grouped suggestions" {
   let trie = @MoonTrieKit.Trie::from_words(["moon", "moonbit", "mooncake"])
   assert_eq(trie.longest_common_prefix_length(), 4)
 }
+
+///|
+test "short first completion ranks compact suggestions first" {
+  let trie = @MoonTrieKit.Trie::from_words(["mooncake", "moon", "moonbit", "mo"])
+  let ranked = trie.complete_short_first("mo", limit=3)
+  assert_eq(ranked.length(), 3)
+  assert_eq(ranked[0], "mo")
+  assert_eq(ranked[1], "moon")
+  assert_eq(ranked[2], "moonbit")
+}

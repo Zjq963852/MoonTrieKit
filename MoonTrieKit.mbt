@@ -149,6 +149,39 @@ pub fn Trie::complete(
 }
 
 ///|
+fn max_word_length(words : Array[String]) -> Int {
+  let mut length = 0
+  for word in words {
+    if word.length() > length {
+      length = word.length()
+    }
+  }
+  length
+}
+
+///|
+pub fn Trie::complete_short_first(
+  self : Trie,
+  prefix : String,
+  limit? : Int = 10,
+) -> Array[String] {
+  let result : Array[String] = []
+  let safe_limit = if limit < 0 { 0 } else { limit }
+  let max_length = max_word_length(self.words)
+  for size = prefix.length(); size <= max_length; size = size + 1 {
+    for word in self.words {
+      if result.length() >= safe_limit {
+        return result
+      }
+      if word.length() == size && starts_with(word, prefix) {
+        result.push(word)
+      }
+    }
+  }
+  result
+}
+
+///|
 pub fn LookupResult::new(
   query : String,
   matched : Bool,
