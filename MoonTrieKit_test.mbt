@@ -25,6 +25,7 @@ test "trie builds from word arrays and exports copies" {
   assert_eq(trie.len(), 2)
   assert_eq(words.length(), 2)
   assert_true(trie.contains("bit"))
+  assert_true(trie.to_json().contains("\"moon\""))
 }
 
 ///|

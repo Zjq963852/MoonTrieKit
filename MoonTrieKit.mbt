@@ -109,6 +109,20 @@ pub fn Trie::to_array(self : Trie) -> Array[String] {
 }
 
 ///|
+pub fn Trie::to_json(self : Trie) -> String {
+  let buf = StringBuilder()
+  buf.write_string("{\"words\":[")
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if i > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string("\"" + self.words[i] + "\"")
+  }
+  buf.write_string("]}")
+  buf.to_string()
+}
+
+///|
 pub fn Trie::has_prefix(self : Trie, prefix : String) -> Bool {
   for word in self.words {
     if starts_with(word, prefix) {
