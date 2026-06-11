@@ -26,3 +26,13 @@ test "trie builds from word arrays and exports copies" {
   assert_eq(words.length(), 2)
   assert_true(trie.contains("bit"))
 }
+
+///|
+test "prefix matching counts dictionary entries" {
+  let trie = @MoonTrieKit.Trie::from_words(["moon", "mooncake", "bit"])
+  assert_true(@MoonTrieKit.starts_with("mooncake", "moon"))
+  assert_true(trie.has_prefix("moo"))
+  assert_false(trie.has_prefix("cat"))
+  assert_eq(trie.count_prefix("moon"), 2)
+  assert_eq(trie.count_prefix("bit"), 1)
+}

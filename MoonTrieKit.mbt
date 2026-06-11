@@ -29,6 +29,19 @@ fn same_text(a : String, b : String) -> Bool {
 }
 
 ///|
+pub fn starts_with(value : String, prefix : String) -> Bool {
+  if prefix.length() > value.length() {
+    return false
+  }
+  for i = 0; i < prefix.length(); i = i + 1 {
+    if value.get_char(i) != prefix.get_char(i) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 pub fn Trie::len(self : Trie) -> Int {
   self.words.length()
 }
@@ -74,6 +87,27 @@ pub fn Trie::to_array(self : Trie) -> Array[String] {
     result.push(word)
   }
   result
+}
+
+///|
+pub fn Trie::has_prefix(self : Trie, prefix : String) -> Bool {
+  for word in self.words {
+    if starts_with(word, prefix) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+pub fn Trie::count_prefix(self : Trie, prefix : String) -> Int {
+  let mut count = 0
+  for word in self.words {
+    if starts_with(word, prefix) {
+      count = count + 1
+    }
+  }
+  count
 }
 
 ///|
