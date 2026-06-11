@@ -48,3 +48,12 @@ test "autocomplete returns prefix matches with limits" {
   assert_eq(first_two[1], "mooncake")
   assert_eq(trie.complete("missing").length(), 0)
 }
+
+///|
+test "lookup reports exact match and prefix counts" {
+  let trie = @MoonTrieKit.Trie::from_words(["moon", "moonbit", "mooncake"])
+  let result = trie.lookup("moon")
+  assert_true(result.matched)
+  assert_eq(result.count, 3)
+  assert_true(result.to_json().contains("\"query\":\"moon\""))
+}

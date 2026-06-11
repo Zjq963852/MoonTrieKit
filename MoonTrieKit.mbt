@@ -137,3 +137,13 @@ pub fn LookupResult::new(
 ) -> LookupResult {
   { query, matched, count }
 }
+
+///|
+pub fn LookupResult::to_json(self : LookupResult) -> String {
+  "{\"query\":\"\{self.query}\",\"matched\":\{self.matched},\"count\":\{self.count}}"
+}
+
+///|
+pub fn Trie::lookup(self : Trie, query : String) -> LookupResult {
+  LookupResult::new(query, self.contains(query), self.count_prefix(query))
+}
