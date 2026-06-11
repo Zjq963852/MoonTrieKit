@@ -1,6 +1,6 @@
-// import {
-//   "Zjq963852/MoonTrieKit" @lib,
-// }
+import {
+  "Zjq963852/MoonTrieKit" @trie,
+}
 
 options(
   "is-main": true,

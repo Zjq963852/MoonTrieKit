@@ -1,7 +1,13 @@
 ///|
-/// Entry point for the CLI or runnable program in this template.
-/// Keep main focused; move logic into the library package.
-/// Run with `moon run cmd/main` from the project root.
 fn main {
-  println("Hello")
+  let dict = @trie.Trie::from_words([
+    "moon", "moonbit", "mooncake", "module", "trie", "tree",
+  ])
+  let matches = dict.complete_short_first("moo", limit=3)
+  let lookup = dict.lookup("moon")
+  println("size=\{dict.len()}")
+  println("prefix_count=\{dict.count_prefix("moo")}")
+  println("first_match=\{matches[0]}")
+  println(lookup.to_json())
+  println(dict.to_json())
 }
