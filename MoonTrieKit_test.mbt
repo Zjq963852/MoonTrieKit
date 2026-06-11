@@ -36,3 +36,15 @@ test "prefix matching counts dictionary entries" {
   assert_eq(trie.count_prefix("moon"), 2)
   assert_eq(trie.count_prefix("bit"), 1)
 }
+
+///|
+test "autocomplete returns prefix matches with limits" {
+  let trie = @MoonTrieKit.Trie::from_words([
+    "moon", "mooncake", "moonbit", "trie",
+  ])
+  let first_two = trie.complete("moon", limit=2)
+  assert_eq(first_two.length(), 2)
+  assert_eq(first_two[0], "moon")
+  assert_eq(first_two[1], "mooncake")
+  assert_eq(trie.complete("missing").length(), 0)
+}

@@ -111,6 +111,25 @@ pub fn Trie::count_prefix(self : Trie, prefix : String) -> Int {
 }
 
 ///|
+pub fn Trie::complete(
+  self : Trie,
+  prefix : String,
+  limit? : Int = 10,
+) -> Array[String] {
+  let result : Array[String] = []
+  let safe_limit = if limit < 0 { 0 } else { limit }
+  for word in self.words {
+    if result.length() >= safe_limit {
+      return result
+    }
+    if starts_with(word, prefix) {
+      result.push(word)
+    }
+  }
+  result
+}
+
+///|
 pub fn LookupResult::new(
   query : String,
   matched : Bool,
