@@ -17,3 +17,12 @@ test "lookup result stores query metadata" {
   assert_true(result.matched)
   assert_eq(result.count, 2)
 }
+
+///|
+test "trie builds from word arrays and exports copies" {
+  let trie = @MoonTrieKit.Trie::from_words(["moon", "moon", "bit", ""])
+  let words = trie.to_array()
+  assert_eq(trie.len(), 2)
+  assert_eq(words.length(), 2)
+  assert_true(trie.contains("bit"))
+}

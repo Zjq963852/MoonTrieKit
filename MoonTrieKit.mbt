@@ -59,6 +59,24 @@ pub fn Trie::insert(self : Trie, word : String) -> Bool {
 }
 
 ///|
+pub fn Trie::from_words(words : Array[String]) -> Trie {
+  let trie = Trie::new()
+  for word in words {
+    ignore(trie.insert(word))
+  }
+  trie
+}
+
+///|
+pub fn Trie::to_array(self : Trie) -> Array[String] {
+  let result : Array[String] = []
+  for word in self.words {
+    result.push(word)
+  }
+  result
+}
+
+///|
 pub fn LookupResult::new(
   query : String,
   matched : Bool,
