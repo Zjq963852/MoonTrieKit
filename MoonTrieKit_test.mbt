@@ -57,3 +57,11 @@ test "lookup reports exact match and prefix counts" {
   assert_eq(result.count, 3)
   assert_true(result.to_json().contains("\"query\":\"moon\""))
 }
+
+///|
+test "common prefix length supports grouped suggestions" {
+  assert_eq(@MoonTrieKit.common_prefix_length("moon", "moonbit"), 4)
+  assert_eq(@MoonTrieKit.common_prefix_length("moon", "bit"), 0)
+  let trie = @MoonTrieKit.Trie::from_words(["moon", "moonbit", "mooncake"])
+  assert_eq(trie.longest_common_prefix_length(), 3)
+}

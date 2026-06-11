@@ -42,6 +42,25 @@ pub fn starts_with(value : String, prefix : String) -> Bool {
 }
 
 ///|
+fn min_int(a : Int, b : Int) -> Int {
+  if a < b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
+pub fn common_prefix_length(a : String, b : String) -> Int {
+  let limit = min_int(a.length(), b.length())
+  let mut count = 0
+  while count < limit && a.get_char(count) == b.get_char(count) {
+    count = count + 1
+  }
+  count
+}
+
+///|
 pub fn Trie::len(self : Trie) -> Int {
   self.words.length()
 }
@@ -146,4 +165,16 @@ pub fn LookupResult::to_json(self : LookupResult) -> String {
 ///|
 pub fn Trie::lookup(self : Trie, query : String) -> LookupResult {
   LookupResult::new(query, self.contains(query), self.count_prefix(query))
+}
+
+///|
+pub fn Trie::longest_common_prefix_length(self : Trie) -> Int {
+  if self.words.length() == 0 {
+    return 0
+  }
+  let mut length = self.words[0].length()
+  for word in self.words {
+    length = min_int(length, common_prefix_length(self.words[0], word))
+  }
+  length
 }
