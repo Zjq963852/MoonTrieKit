@@ -1,6 +1,7 @@
 ///|
 pub(all) struct Trie {
   words : Array[String]
+  weights : Array[Int]
 } derive(Debug)
 
 ///|
@@ -11,8 +12,30 @@ pub(all) struct LookupResult {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct WeightedTerm {
+  word : String
+  weight : Int
+} derive(Debug, Eq)
+
+///|
+pub(all) struct CompletionItem {
+  word : String
+  weight : Int
+  score : Int
+} derive(Debug, Eq)
+
+///|
+pub(all) struct QueryTrace {
+  query : String
+  exact : Bool
+  prefix_hits : Int
+  longest_prefix : String
+  suggestions : Array[CompletionItem]
+} derive(Debug)
+
+///|
 pub fn Trie::new() -> Trie {
-  { words: [] }
+  { words: [], weights: [] }
 }
 
 ///|
@@ -82,10 +105,25 @@ pub fn Trie::contains(self : Trie, word : String) -> Bool {
 
 ///|
 pub fn Trie::insert(self : Trie, word : String) -> Bool {
+  self.insert_weighted(word, 1)
+}
+
+///|
+fn safe_weight(weight : Int) -> Int {
+  if weight < 0 {
+    0
+  } else {
+    weight
+  }
+}
+
+///|
+pub fn Trie::insert_weighted(self : Trie, word : String, weight : Int) -> Bool {
   if word.length() == 0 || self.contains(word) {
     false
   } else {
     self.words.push(word)
+    self.weights.push(safe_weight(weight))
     true
   }
 }
@@ -100,12 +138,36 @@ pub fn Trie::from_words(words : Array[String]) -> Trie {
 }
 
 ///|
+pub fn WeightedTerm::new(word : String, weight : Int) -> WeightedTerm {
+  { word, weight: safe_weight(weight) }
+}
+
+///|
+pub fn Trie::from_weighted(entries : Array[WeightedTerm]) -> Trie {
+  let trie = Trie::new()
+  for entry in entries {
+    ignore(trie.insert_weighted(entry.word, entry.weight))
+  }
+  trie
+}
+
+///|
 pub fn Trie::to_array(self : Trie) -> Array[String] {
   let result : Array[String] = []
   for word in self.words {
     result.push(word)
   }
   result
+}
+
+///|
+pub fn Trie::weight_of(self : Trie, word : String) -> Int {
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if same_text(self.words[i], word) {
+      return self.weights[i]
+    }
+  }
+  0
 }
 
 ///|
@@ -117,6 +179,22 @@ pub fn Trie::to_json(self : Trie) -> String {
       buf.write_char(',')
     }
     buf.write_string("\"" + self.words[i] + "\"")
+  }
+  buf.write_string("]}")
+  buf.to_string()
+}
+
+///|
+pub fn Trie::to_weighted_json(self : Trie) -> String {
+  let buf = StringBuilder()
+  buf.write_string("{\"entries\":[")
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if i > 0 {
+      buf.write_char(',')
+    }
+    buf.write_string(
+      "{\"word\":\"" + self.words[i] + "\",\"weight\":\{self.weights[i]}}",
+    )
   }
   buf.write_string("]}")
   buf.to_string()
@@ -196,6 +274,75 @@ pub fn Trie::complete_short_first(
 }
 
 ///|
+pub fn CompletionItem::new(
+  word : String,
+  weight : Int,
+  prefix_length : Int,
+) -> CompletionItem {
+  let safe = safe_weight(weight)
+  {
+    word,
+    weight: safe,
+    score: safe * 1000 + prefix_length * 10 - word.length(),
+  }
+}
+
+///|
+fn contains_completion(items : Array[CompletionItem], word : String) -> Bool {
+  for item in items {
+    if same_text(item.word, word) {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn better_completion(
+  candidate : CompletionItem,
+  current : CompletionItem,
+) -> Bool {
+  candidate.score > current.score ||
+  (
+    candidate.score == current.score &&
+    candidate.word.length() < current.word.length()
+  )
+}
+
+///|
+pub fn Trie::complete_ranked(
+  self : Trie,
+  prefix : String,
+  limit? : Int = 10,
+) -> Array[CompletionItem] {
+  let result : Array[CompletionItem] = []
+  let safe_limit = if limit < 0 { 0 } else { limit }
+  while result.length() < safe_limit {
+    let mut found = false
+    let mut best = CompletionItem::new("", 0, 0)
+    for i = 0; i < self.words.length(); i = i + 1 {
+      if starts_with(self.words[i], prefix) &&
+        !contains_completion(result, self.words[i]) {
+        let item = CompletionItem::new(
+          self.words[i],
+          self.weights[i],
+          prefix.length(),
+        )
+        if !found || better_completion(item, best) {
+          best = item
+          found = true
+        }
+      }
+    }
+    if !found {
+      return result
+    }
+    result.push(best)
+  }
+  result
+}
+
+///|
 pub fn LookupResult::new(
   query : String,
   matched : Bool,
@@ -212,6 +359,62 @@ pub fn LookupResult::to_json(self : LookupResult) -> String {
 ///|
 pub fn Trie::lookup(self : Trie, query : String) -> LookupResult {
   LookupResult::new(query, self.contains(query), self.count_prefix(query))
+}
+
+///|
+pub fn Trie::longest_prefix_of(self : Trie, text : String) -> String {
+  let mut best = ""
+  for word in self.words {
+    if starts_with(text, word) && word.length() > best.length() {
+      best = word
+    }
+  }
+  best
+}
+
+///|
+pub fn QueryTrace::new(
+  query : String,
+  exact : Bool,
+  prefix_hits : Int,
+  longest_prefix : String,
+  suggestions : Array[CompletionItem],
+) -> QueryTrace {
+  { query, exact, prefix_hits, longest_prefix, suggestions }
+}
+
+///|
+pub fn QueryTrace::to_json(self : QueryTrace) -> String {
+  let buf = StringBuilder()
+  buf.write_string(
+    "{\"query\":\"\{self.query}\",\"exact\":\{self.exact},\"prefix_hits\":\{self.prefix_hits},\"longest_prefix\":\"\{self.longest_prefix}\",\"suggestions\":[",
+  )
+  for i = 0; i < self.suggestions.length(); i = i + 1 {
+    if i > 0 {
+      buf.write_char(',')
+    }
+    let item = self.suggestions[i]
+    buf.write_string(
+      "{\"word\":\"\{item.word}\",\"weight\":\{item.weight},\"score\":\{item.score}}",
+    )
+  }
+  buf.write_string("]}")
+  buf.to_string()
+}
+
+///|
+pub fn Trie::explain(
+  self : Trie,
+  query : String,
+  limit? : Int = 5,
+) -> QueryTrace {
+  QueryTrace::new(
+    query,
+    self.contains(query),
+    self.count_prefix(query),
+    self.longest_prefix_of(query),
+    self.complete_ranked(query, limit~),
+  )
 }
 
 ///|

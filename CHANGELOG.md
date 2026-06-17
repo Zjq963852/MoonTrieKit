@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 - 2026-06-17
+
+- 补充与 `Yoorkin/trie@0.2.10` 的关系说明，明确项目不只是基础 Trie 容器。
+- 新增 `WeightedTerm`，支持带权词典构建和权重查询。
+- 新增 `CompletionItem` 与 `complete_ranked`，支持权重优先、短词补偿的排序补全。
+- 新增 `longest_prefix_of`，支持命令路由、路径 token 和配置键最长匹配。
+- 新增 `QueryTrace`，支持输出 exact、prefix_hits、longest_prefix 和 suggestions。
+- 更新 CLI 演示与测试，当前 MoonBit 测试扩展到 11 个。
+
 ## 0.1.0 - 2026-06-11
 
 - 初始化 MoonTrieKit 项目结构和元信息。
