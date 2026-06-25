@@ -122,3 +122,73 @@ test "query trace explains exact match longest prefix and suggestions" {
   assert_eq(trace.suggestions.length(), 2)
   assert_true(trace.to_json().contains("\"longest_prefix\":\"moon\""))
 }
+
+///|
+test "dictionary mutation keeps words and weights aligned" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 5),
+    @MoonTrieKit.WeightedTerm::new("moonbit", 8),
+  ])
+  assert_true(trie.set_weight("moon", 9))
+  assert_true(trie.increment_weight("moon", 2))
+  assert_eq(trie.weight_of("moon"), 11)
+  assert_true(trie.remove("moon"))
+  assert_false(trie.contains("moon"))
+  assert_eq(trie.weight_of("moonbit"), 8)
+  assert_false(trie.remove("missing"))
+}
+
+///|
+test "negative weight updates clamp to zero" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 3),
+  ])
+  assert_true(trie.increment_weight("moon", -10))
+  assert_eq(trie.weight_of("moon"), 0)
+  assert_true(trie.set_weight("moon", -5))
+  assert_eq(trie.weight_of("moon"), 0)
+}
+
+///|
+test "top ranked returns global weighted suggestions" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 3),
+    @MoonTrieKit.WeightedTerm::new("bit", 9),
+    @MoonTrieKit.WeightedTerm::new("trie", 5),
+  ])
+  let top = trie.top_ranked(limit=2)
+  assert_eq(top.length(), 2)
+  assert_eq(top[0].word, "bit")
+  assert_eq(top[1].word, "trie")
+}
+
+///|
+test "ranking policy can favor compact terms over weight" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("mo", 1),
+    @MoonTrieKit.WeightedTerm::new("moonbitlong", 2),
+  ])
+  let policy = @MoonTrieKit.RankingPolicy::new(
+    weight_factor=1,
+    prefix_bonus=0,
+    length_penalty=10,
+  )
+  let ranked = trie.complete_ranked_with("mo", policy, limit=2)
+  assert_eq(ranked[0].word, "mo")
+}
+
+///|
+test "ranked pages are stable and non-overlapping" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 9),
+    @MoonTrieKit.WeightedTerm::new("moonbit", 8),
+    @MoonTrieKit.WeightedTerm::new("mooncake", 7),
+    @MoonTrieKit.WeightedTerm::new("moonbase", 6),
+  ])
+  let first = trie.complete_ranked_page("moo", offset=0, limit=2)
+  let second = trie.complete_ranked_page("moo", offset=2, limit=2)
+  assert_eq(first.length(), 2)
+  assert_eq(second.length(), 2)
+  assert_eq(first[0].word, "moon")
+  assert_eq(second[0].word, "mooncake")
+}

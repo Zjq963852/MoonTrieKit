@@ -25,6 +25,13 @@ pub(all) struct CompletionItem {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct RankingPolicy {
+  weight_factor : Int
+  prefix_bonus : Int
+  length_penalty : Int
+} derive(Debug, Eq)
+
+///|
 pub(all) struct QueryTrace {
   query : String
   exact : Bool
@@ -171,6 +178,40 @@ pub fn Trie::weight_of(self : Trie, word : String) -> Int {
 }
 
 ///|
+pub fn Trie::remove(self : Trie, word : String) -> Bool {
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if same_text(self.words[i], word) {
+      ignore(self.words.remove(i))
+      ignore(self.weights.remove(i))
+      return true
+    }
+  }
+  false
+}
+
+///|
+pub fn Trie::set_weight(self : Trie, word : String, weight : Int) -> Bool {
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if same_text(self.words[i], word) {
+      self.weights[i] = safe_weight(weight)
+      return true
+    }
+  }
+  false
+}
+
+///|
+pub fn Trie::increment_weight(self : Trie, word : String, delta : Int) -> Bool {
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if same_text(self.words[i], word) {
+      self.weights[i] = safe_weight(self.weights[i] + delta)
+      return true
+    }
+  }
+  false
+}
+
+///|
 pub fn Trie::to_json(self : Trie) -> String {
   let buf = StringBuilder()
   buf.write_string("{\"words\":[")
@@ -279,11 +320,58 @@ pub fn CompletionItem::new(
   weight : Int,
   prefix_length : Int,
 ) -> CompletionItem {
+  CompletionItem::with_policy(
+    word,
+    weight,
+    prefix_length,
+    RankingPolicy::default(),
+  )
+}
+
+///|
+pub fn RankingPolicy::new(
+  weight_factor? : Int = 1000,
+  prefix_bonus? : Int = 10,
+  length_penalty? : Int = 1,
+) -> RankingPolicy {
+  {
+    weight_factor: if weight_factor < 0 {
+      0
+    } else {
+      weight_factor
+    },
+    prefix_bonus: if prefix_bonus < 0 {
+      0
+    } else {
+      prefix_bonus
+    },
+    length_penalty: if length_penalty < 0 {
+      0
+    } else {
+      length_penalty
+    },
+  }
+}
+
+///|
+pub fn RankingPolicy::default() -> RankingPolicy {
+  RankingPolicy::new()
+}
+
+///|
+pub fn CompletionItem::with_policy(
+  word : String,
+  weight : Int,
+  prefix_length : Int,
+  policy : RankingPolicy,
+) -> CompletionItem {
   let safe = safe_weight(weight)
   {
     word,
     weight: safe,
-    score: safe * 1000 + prefix_length * 10 - word.length(),
+    score: safe * policy.weight_factor +
+    prefix_length * policy.prefix_bonus -
+    word.length() * policy.length_penalty,
   }
 }
 
@@ -315,6 +403,16 @@ pub fn Trie::complete_ranked(
   prefix : String,
   limit? : Int = 10,
 ) -> Array[CompletionItem] {
+  self.complete_ranked_with(prefix, RankingPolicy::default(), limit~)
+}
+
+///|
+pub fn Trie::complete_ranked_with(
+  self : Trie,
+  prefix : String,
+  policy : RankingPolicy,
+  limit? : Int = 10,
+) -> Array[CompletionItem] {
   let result : Array[CompletionItem] = []
   let safe_limit = if limit < 0 { 0 } else { limit }
   while result.length() < safe_limit {
@@ -323,10 +421,11 @@ pub fn Trie::complete_ranked(
     for i = 0; i < self.words.length(); i = i + 1 {
       if starts_with(self.words[i], prefix) &&
         !contains_completion(result, self.words[i]) {
-        let item = CompletionItem::new(
+        let item = CompletionItem::with_policy(
           self.words[i],
           self.weights[i],
           prefix.length(),
+          policy,
         )
         if !found || better_completion(item, best) {
           best = item
@@ -340,6 +439,34 @@ pub fn Trie::complete_ranked(
     result.push(best)
   }
   result
+}
+
+///|
+pub fn Trie::top_ranked(
+  self : Trie,
+  limit? : Int = 10,
+) -> Array[CompletionItem] {
+  self.complete_ranked("", limit~)
+}
+
+///|
+pub fn Trie::complete_ranked_page(
+  self : Trie,
+  prefix : String,
+  offset? : Int = 0,
+  limit? : Int = 10,
+) -> Array[CompletionItem] {
+  let safe_offset = if offset < 0 { 0 } else { offset }
+  let safe_limit = if limit < 0 { 0 } else { limit }
+  let ranked = self.complete_ranked(prefix, limit=safe_offset + safe_limit)
+  let page : Array[CompletionItem] = []
+  for i = safe_offset; i < ranked.length(); i = i + 1 {
+    if page.length() >= safe_limit {
+      return page
+    }
+    page.push(ranked[i])
+  }
+  page
 }
 
 ///|
