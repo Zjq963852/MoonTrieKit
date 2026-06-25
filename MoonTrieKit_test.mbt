@@ -192,3 +192,45 @@ test "ranked pages are stable and non-overlapping" {
   assert_eq(first[0].word, "moon")
   assert_eq(second[0].word, "mooncake")
 }
+
+///|
+test "ranked page exposes total hits and continuation" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 9),
+    @MoonTrieKit.WeightedTerm::new("moonbit", 8),
+    @MoonTrieKit.WeightedTerm::new("mooncake", 7),
+  ])
+  let page = trie.ranked_page("moo", offset=0, limit=2)
+  assert_eq(page.total_hits, 3)
+  assert_true(page.has_more)
+  assert_eq(page.items.length(), 2)
+  assert_true(page.to_json().contains("\"has_more\":true"))
+}
+
+///|
+test "dictionary stats summarize weighted corpus" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 5),
+    @MoonTrieKit.WeightedTerm::new("moonbit", 8),
+    @MoonTrieKit.WeightedTerm::new("module", 0),
+  ])
+  let stats = trie.stats()
+  assert_eq(stats.terms, 3)
+  assert_eq(stats.total_weight, 13)
+  assert_eq(stats.max_word_length, 7)
+  assert_eq(stats.zero_weight_terms, 1)
+  assert_true(stats.to_json().contains("\"terms\":3"))
+}
+
+///|
+test "public constructors maintain dictionary invariants" {
+  let trie = @MoonTrieKit.Trie::from_weighted([
+    @MoonTrieKit.WeightedTerm::new("moon", 5),
+    @MoonTrieKit.WeightedTerm::new("moon", 9),
+    @MoonTrieKit.WeightedTerm::new("", 3),
+    @MoonTrieKit.WeightedTerm::new("module", -2),
+  ])
+  assert_eq(trie.validate().length(), 0)
+  assert_eq(trie.len(), 2)
+  assert_eq(trie.weight_of("module"), 0)
+}

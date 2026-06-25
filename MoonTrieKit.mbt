@@ -41,6 +41,24 @@ pub(all) struct QueryTrace {
 } derive(Debug)
 
 ///|
+pub(all) struct RankedPage {
+  prefix : String
+  offset : Int
+  limit : Int
+  total_hits : Int
+  has_more : Bool
+  items : Array[CompletionItem]
+} derive(Debug)
+
+///|
+pub(all) struct DictionaryStats {
+  terms : Int
+  total_weight : Int
+  max_word_length : Int
+  zero_weight_terms : Int
+} derive(Debug, Eq)
+
+///|
 pub fn Trie::new() -> Trie {
   { words: [], weights: [] }
 }
@@ -467,6 +485,94 @@ pub fn Trie::complete_ranked_page(
     page.push(ranked[i])
   }
   page
+}
+
+///|
+pub fn Trie::ranked_page(
+  self : Trie,
+  prefix : String,
+  offset? : Int = 0,
+  limit? : Int = 10,
+) -> RankedPage {
+  let safe_offset = if offset < 0 { 0 } else { offset }
+  let safe_limit = if limit < 0 { 0 } else { limit }
+  let total_hits = self.count_prefix(prefix)
+  {
+    prefix,
+    offset: safe_offset,
+    limit: safe_limit,
+    total_hits,
+    has_more: safe_offset + safe_limit < total_hits,
+    items: self.complete_ranked_page(
+      prefix,
+      offset=safe_offset,
+      limit=safe_limit,
+    ),
+  }
+}
+
+///|
+pub fn RankedPage::to_json(self : RankedPage) -> String {
+  let buf = StringBuilder()
+  buf.write_string(
+    "{\"prefix\":\"\{self.prefix}\",\"offset\":\{self.offset},\"limit\":\{self.limit},\"total_hits\":\{self.total_hits},\"has_more\":\{self.has_more},\"items\":[",
+  )
+  for i = 0; i < self.items.length(); i = i + 1 {
+    if i > 0 {
+      buf.write_char(',')
+    }
+    let item = self.items[i]
+    buf.write_string(
+      "{\"word\":\"\{item.word}\",\"weight\":\{item.weight},\"score\":\{item.score}}",
+    )
+  }
+  buf.write_string("]}")
+  buf.to_string()
+}
+
+///|
+pub fn Trie::stats(self : Trie) -> DictionaryStats {
+  let mut total_weight = 0
+  let mut zero_weight_terms = 0
+  for weight in self.weights {
+    total_weight = total_weight + weight
+    if weight == 0 {
+      zero_weight_terms = zero_weight_terms + 1
+    }
+  }
+  {
+    terms: self.words.length(),
+    total_weight,
+    max_word_length: max_word_length(self.words),
+    zero_weight_terms,
+  }
+}
+
+///|
+pub fn DictionaryStats::to_json(self : DictionaryStats) -> String {
+  "{\"terms\":\{self.terms},\"total_weight\":\{self.total_weight},\"max_word_length\":\{self.max_word_length},\"zero_weight_terms\":\{self.zero_weight_terms}}"
+}
+
+///|
+pub fn Trie::validate(self : Trie) -> Array[String] {
+  let issues : Array[String] = []
+  if self.words.length() != self.weights.length() {
+    issues.push("words and weights length mismatch")
+  }
+  for i = 0; i < self.words.length(); i = i + 1 {
+    if self.words[i].length() == 0 {
+      issues.push("empty word at index \{i}")
+    }
+    if i < self.weights.length() && self.weights[i] < 0 {
+      issues.push("negative weight at index \{i}")
+    }
+    for j = i + 1; j < self.words.length(); j = j + 1 {
+      if same_text(self.words[i], self.words[j]) {
+        issues.push("duplicate word: \{self.words[i]}")
+      }
+    }
+  }
+  issues
 }
 
 ///|
