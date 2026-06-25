@@ -1,19 +1,23 @@
 # Changelog
 
+## 0.2.0 - 2026-06-25
+
+- 新增 `RankingPolicy`，支持配置权重、前缀奖励和词长惩罚。
+- 新增 `remove`、`set_weight` 和 `increment_weight`。
+- 新增 `top_ranked`、`complete_ranked_page`、`ranked_page` 与 `RankedPage`。
+- 新增 `DictionaryStats`、统计 JSON 和 `Trie::validate`。
+- CLI 增加分页、动态权重、统计和一致性校验演示。
+- 测试由 11 个增至 19 个。
+- 新增功能证据清单，明确源码、测试和提交的对应关系。
+
 ## 0.1.1 - 2026-06-17
 
-- 补充与 `Yoorkin/trie@0.2.10` 的关系说明，明确项目不只是基础 Trie 容器。
-- 新增 `WeightedTerm`，支持带权词典构建和权重查询。
-- 新增 `CompletionItem` 与 `complete_ranked`，支持权重优先、短词补偿的排序补全。
-- 新增 `longest_prefix_of`，支持命令路由、路径 token 和配置键最长匹配。
-- 新增 `QueryTrace`，支持输出 exact、prefix_hits、longest_prefix 和 suggestions。
-- 更新 CLI 演示与测试，当前 MoonBit 测试扩展到 11 个。
+- 补充与 `Yoorkin/trie@0.2.10` 的关系说明。
+- 新增 `WeightedTerm`、`CompletionItem` 和 `complete_ranked`。
+- 新增 `longest_prefix_of` 和 `QueryTrace`。
+- 测试增至 11 个。
 
 ## 0.1.0 - 2026-06-11
 
-- 初始化 MoonTrieKit 项目结构和元信息。
-- 增加 Trie、LookupResult、插入去重、批量构建和数组导出。
-- 增加前缀匹配、前缀计数、自动补全和短词优先补全。
-- 增加最长公共前缀分析、检索摘要和 JSON 导出。
-- 增加 CLI 演示、CI 配置、Issue 模板和 PR 模板。
-- 增加 README、路线图、公开开发追踪和示例文档。
+- 初始化 MoonBit 工程、基础词典模型、前缀查询和自动补全。
+- 增加 CLI、CI、Issue 模板、PR 模板、路线图和公开开发追踪。
